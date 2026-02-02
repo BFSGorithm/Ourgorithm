@@ -939,6 +939,43 @@ async function saveAuditToDB(siteId, audit) {
   }
 }
 
+async function loadFullAuditFromDB(siteId) {
+  try {
+    const { data, error } = await supabase
+      .from('audits')
+      .select('*')
+      .eq('site_id', siteId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error) throw error;
+    
+    // Convert DB format back to app format
+    return {
+      success: true,
+      totalScore: data.total_score,
+      platform: { 
+        name: data.platform_detected || 'Unknown', 
+        confidence: (data.platform_confidence || 0.5) * 100,
+        note: ''
+      },
+      directoryReadiness: { 
+        tier: data.directory_readiness || 'not_ready', 
+        percentage: data.directory_readiness === 'featured' ? 100 : data.directory_readiness === 'basic' ? 75 : 25,
+        passedCount: data.directory_readiness === 'featured' ? 8 : data.directory_readiness === 'basic' ? 6 : 2,
+        totalCount: 8,
+        requirements: (data.directory_blockers || []).map(b => ({ label: b, passed: false }))
+      },
+      categories: data.categories || null,
+      auditDate: data.created_at,
+    };
+  } catch (err) {
+    console.error('Failed to load audit:', err);
+    return null;
+  }
+}
+
 async function saveSprintRequestToDB(siteId, email, phone, readinessTier, blockers) {
   try {
     const { data, error } = await supabase
@@ -1147,20 +1184,31 @@ async function downloadPDF(site, audit, branding = {}) {
     }
     
     // Check if we have audit data
+    let fullAudit = audit;
     if (!audit) {
       throw new Error('No audit data available');
     }
     
+    // If audit is missing categories, try to load full audit from database
+    if (!audit.categories && site.id) {
+      console.log('Loading full audit from database...');
+      const dbAudit = await loadFullAuditFromDB(site.id);
+      if (dbAudit) {
+        fullAudit = dbAudit;
+        console.log('Full audit loaded from DB');
+      }
+    }
+    
     console.log('Generating report for:', site.domain);
-    console.log('Audit data:', audit);
+    console.log('Audit data:', fullAudit);
     
     // Generate HTML with fallbacks for missing data
     const safeAudit = {
-      totalScore: audit.totalScore || 0,
-      platform: audit.platform || { name: 'Unknown', note: '', confidence: 0 },
-      directoryReadiness: audit.directoryReadiness || { tier: 'not_ready', percentage: 0, passedCount: 0, totalCount: 8, requirements: [] },
-      categories: audit.categories || null,
-      auditDate: audit.auditDate || new Date().toISOString(),
+      totalScore: fullAudit.totalScore || 0,
+      platform: fullAudit.platform || { name: 'Unknown', note: '', confidence: 0 },
+      directoryReadiness: fullAudit.directoryReadiness || { tier: 'not_ready', percentage: 0, passedCount: 0, totalCount: 8, requirements: [] },
+      categories: fullAudit.categories || null,
+      auditDate: fullAudit.auditDate || new Date().toISOString(),
     };
     
     const html = generateReportHTML(site, safeAudit, branding);
@@ -1173,7 +1221,7 @@ async function downloadPDF(site, audit, branding = {}) {
     container.style.width = '800px';
     document.body.appendChild(container);
     
-    // Wait a tick for images to start loading
+    // Wait a tick for rendering
     await new Promise(r => setTimeout(r, 500));
     
     await window.html2pdf().set({
