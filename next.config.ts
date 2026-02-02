@@ -1,7 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  // No basePath needed for subdomain
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
