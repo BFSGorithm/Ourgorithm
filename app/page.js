@@ -1314,6 +1314,7 @@ export default function OnlinePresenceAuditTool() {
   const [showNoPresenceLetter, setShowNoPresenceLetter] = useState(null);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [showSprintModal, setShowSprintModal] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [branding, setBranding] = useState({
     companyName: DIRECTORY_CONFIG.name,
     primaryColor: DIRECTORY_CONFIG.colors.primary,
@@ -1520,9 +1521,61 @@ export default function OnlinePresenceAuditTool() {
   const featuredReady = sites.filter(s => s.audit?.directoryReadiness?.tier === 'featured').length;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
+    <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-lg p-1">
+            <img 
+              src="/images/OGlogo.jpeg" 
+              alt="Ourgorithm" 
+              className="h-8 w-auto" 
+              onError={(e) => { 
+                e.target.onerror = null; 
+                e.target.style.display = 'none';
+              }} 
+            />
+          </div>
+          <span className="font-semibold">Ourgorithm</span>
+        </div>
+        <button 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 hover:bg-slate-800 rounded-lg"
+        >
+          {mobileMenuOpen ? '✕' : '☰'}
+        </button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 bg-slate-900 text-white p-6">
+          <div className="flex justify-between items-center mb-8">
+            <span className="font-semibold text-lg">Menu</span>
+            <button onClick={() => setMobileMenuOpen(false)} className="text-2xl">✕</button>
+          </div>
+          <nav className="space-y-2">
+            {[
+              { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+              { id: 'sites', icon: '🌐', label: 'Sites' },
+              { id: 'settings', icon: '⚙️', label: 'Settings' },
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => { setCurrentView(item.id); setSelectedSite(null); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-4 rounded-lg flex items-center gap-3 text-lg ${
+                  currentView === item.id ? 'bg-blue-600' : 'hover:bg-slate-800'
+                }`}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
+
+      {/* Sidebar - Desktop Only */}
+      <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col">
         <div className="p-6 border-b border-slate-700">
           <div className="bg-white rounded-lg p-2 mb-3">
             <img 
@@ -1594,8 +1647,8 @@ export default function OnlinePresenceAuditTool() {
 
         {/* Dashboard View */}
         {currentView === 'dashboard' && (
-          <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Ourgorithm Dashboard</h2>
+          <div className="p-4 md:p-8">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Ourgorithm Dashboard</h2>
             
             {/* Loading State */}
             {isLoadingSites && (
@@ -1608,7 +1661,7 @@ export default function OnlinePresenceAuditTool() {
             {!isLoadingSites && (
               <>
                 {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
                   <div className="bg-white rounded-xl p-6 shadow-sm">
                     <div className="text-3xl font-bold text-gray-800">{totalSites}</div>
                     <div className="text-gray-500 text-sm">Total Sites</div>
@@ -1643,7 +1696,7 @@ export default function OnlinePresenceAuditTool() {
                   
                   {showAddForm && (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Website Domain *</label>
                           <input
@@ -1666,7 +1719,7 @@ export default function OnlinePresenceAuditTool() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Full Address</label>
                           <input
@@ -1689,7 +1742,7 @@ export default function OnlinePresenceAuditTool() {
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
                           <select
@@ -1739,17 +1792,18 @@ export default function OnlinePresenceAuditTool() {
                 {/* Recent Sites */}
                 {sites.length > 0 && (
                   <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-                    <div className="p-6 border-b">
+                    <div className="p-4 md:p-6 border-b">
                       <h3 className="font-semibold text-gray-800">Recent Sites</h3>
                     </div>
-                    <table className="w-full">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Site</th>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Score</th>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Platform</th>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Directory Status</th>
-                          <th className="text-right px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                          <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Site</th>
+                          <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Score</th>
+                          <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Platform</th>
+                          <th className="text-left px-4 md:px-6 py-3 text-xs font-semibold text-gray-500 uppercase hidden md:table-cell">Status</th>
+                          <th className="text-right px-4 md:px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -1826,6 +1880,7 @@ export default function OnlinePresenceAuditTool() {
                         ))}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                 )}
 
@@ -1843,12 +1898,12 @@ export default function OnlinePresenceAuditTool() {
 
         {/* Sites List View */}
         {currentView === 'sites' && (
-          <div className="p-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800">All Sites</h2>
+          <div className="p-4 md:p-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">All Sites</h2>
               <button
                 onClick={() => { setCurrentView('dashboard'); setShowAddForm(true); }}
-                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+                className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
               >
                 + Add Business
               </button>
@@ -1857,30 +1912,41 @@ export default function OnlinePresenceAuditTool() {
             {sites.length > 0 ? (
               <div className="grid gap-4">
                 {sites.map(site => (
-                  <div key={site.id} className="bg-white rounded-xl p-6 shadow-sm">
-                    <div className="flex items-center gap-6">
+                  <div key={site.id} className="bg-white rounded-xl p-4 md:p-6 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
                       {/* Score Circle */}
-                      <div className="flex-shrink-0">
-                        {(site.audit?.success || site.audit?.totalScore) ? (
-                          <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl ${getScoreColor(site.audit.totalScore).class}`}>
-                            {site.audit.totalScore}
+                      <div className="flex items-center gap-4 md:block">
+                        <div className="flex-shrink-0">
+                          {(site.audit?.success || site.audit?.totalScore) ? (
+                            <div className={`w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg md:text-xl ${getScoreColor(site.audit.totalScore).class}`}>
+                              {site.audit.totalScore}
+                            </div>
+                          ) : (
+                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                              N/A
+                            </div>
+                          )}
+                        </div>
+                        {/* Mobile: Show name next to score */}
+                        <div className="md:hidden flex-1">
+                          <div className="font-semibold text-gray-800">
+                            {site.businessName || site.domain}
                           </div>
-                        ) : (
-                          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">
-                            N/A
-                          </div>
-                        )}
+                          {site.businessName && (
+                            <div className="text-xs text-gray-500">{site.domain}</div>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* Site Info */}
-                      <div className="flex-1">
+                      {/* Site Info - Desktop */}
+                      <div className="hidden md:block flex-1">
                         <div className="font-semibold text-gray-800 text-lg">
                           {site.businessName || site.domain}
                         </div>
                         {site.businessName && (
                           <div className="text-sm text-gray-500">{site.domain}</div>
                         )}
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 flex-wrap">
                           {site.address && (
                             <span>📍 {site.address}</span>
                           )}
@@ -1898,10 +1964,20 @@ export default function OnlinePresenceAuditTool() {
                               site.audit.directoryReadiness.tier === 'basic' ? 'text-blue-600' :
                               'text-orange-600'
                             }>
-                              {site.audit.directoryReadiness.percentage}% Directory Ready
+                              {site.audit.directoryReadiness.percentage}% Ready
                             </span>
                           )}
                         </div>
+                      </div>
+
+                      {/* Mobile: Extra info below */}
+                      <div className="md:hidden text-sm text-gray-500 space-y-1">
+                        {site.address && <div>📍 {site.address}</div>}
+                        {site.audit?.platform && (
+                          <span className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-xs">
+                            {site.audit.platform.name}
+                          </span>
+                        )}
                       </div>
                       
                       {/* Data Confidence Badge */}
@@ -1917,11 +1993,11 @@ export default function OnlinePresenceAuditTool() {
                          '📡 Detected'}
                       </span>
                       
-                      {/* Industry */}
+                      {/* Industry - Hidden on mobile */}
                       <select
                         value={site.industry}
                         onChange={(e) => updateSite(site.id, { industry: e.target.value })}
-                        className="px-3 py-2 border rounded-lg text-sm text-gray-700 bg-white"
+                        className="hidden md:block px-3 py-2 border rounded-lg text-sm text-gray-700 bg-white"
                       >
                         {Object.entries(INDUSTRY_PRESETS).map(([key, preset]) => (
                           <option key={key} value={key}>{preset.label}</option>
@@ -1929,23 +2005,23 @@ export default function OnlinePresenceAuditTool() {
                       </select>
                       
                       {/* Actions */}
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2 w-full md:w-auto">
                         {(site.audit?.success || site.audit?.totalScore) && (
                           <button
                             onClick={() => { setSelectedSite(site); setCurrentView('site-detail'); }}
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                            className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm"
                           >
-                            View Report
+                            View
                           </button>
                         )}
                         <button
                           onClick={() => runAudit(site.id)}
                           disabled={isLoading[site.id]}
-                          className={`px-4 py-2 rounded-lg font-medium text-white ${
+                          className={`flex-1 md:flex-none px-3 md:px-4 py-2 rounded-lg font-medium text-white text-sm ${
                             isLoading[site.id] ? 'bg-gray-400' : 'bg-emerald-600 hover:bg-emerald-700'
                           }`}
                         >
-                          {isLoading[site.id] ? '⏳ Scanning...' : site.audit ? '🔄 Re-Audit' : '▶ Run Audit'}
+                          {isLoading[site.id] ? '⏳...' : site.audit ? '🔄 Audit' : '▶ Audit'}
                         </button>
                         <button
                           onClick={() => deleteSite(site.id)}
@@ -1976,57 +2052,59 @@ export default function OnlinePresenceAuditTool() {
 
         {/* Site Detail View */}
         {currentView === 'site-detail' && selectedSite?.audit && (selectedSite.audit.success || selectedSite.audit.totalScore) && (
-          <div className="p-8">
+          <div className="p-4 md:p-8">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                 <button
                   onClick={() => { setCurrentView('sites'); setSelectedSite(null); }}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="text-gray-500 hover:text-gray-700 self-start"
                 >
                   ← Back
                 </button>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-800">
                     {selectedSite.businessName || selectedSite.domain}
                   </h2>
                   {selectedSite.businessName && (
                     <div className="text-sm text-gray-500">{selectedSite.domain}</div>
                   )}
                 </div>
-                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
-                  {selectedSite.audit.platform.name}
-                </span>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  selectedSite.dataConfidenceSource === 'oauth_verified' ? 'bg-green-100 text-green-700' :
-                  selectedSite.dataConfidenceSource === 'api_verified' ? 'bg-blue-100 text-blue-700' :
-                  selectedSite.dataConfidenceSource === 'client_confirmed' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-gray-100 text-gray-600'
-                }`}>
-                  {selectedSite.dataConfidenceSource === 'oauth_verified' ? '✅ OAuth Verified' :
-                   selectedSite.dataConfidenceSource === 'api_verified' ? '🔗 API Verified' :
-                   selectedSite.dataConfidenceSource === 'client_confirmed' ? '👤 Client Confirmed' :
-                   '📡 Detected'}
-                </span>
+                <div className="flex flex-wrap gap-2">
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                    {selectedSite.audit.platform?.name || 'Unknown'}
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    selectedSite.dataConfidenceSource === 'oauth_verified' ? 'bg-green-100 text-green-700' :
+                    selectedSite.dataConfidenceSource === 'api_verified' ? 'bg-blue-100 text-blue-700' :
+                    selectedSite.dataConfidenceSource === 'client_confirmed' ? 'bg-yellow-100 text-yellow-700' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {selectedSite.dataConfidenceSource === 'oauth_verified' ? '✅ Verified' :
+                     selectedSite.dataConfidenceSource === 'api_verified' ? '🔗 API' :
+                     selectedSite.dataConfidenceSource === 'client_confirmed' ? '👤 Confirmed' :
+                     '📡 Detected'}
+                  </span>
+                </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-2 md:gap-3">
                 <button
                   onClick={() => downloadPDF(selectedSite, selectedSite.audit, branding)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center gap-2"
+                  className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2 text-sm md:text-base"
                 >
-                  📄 Download PDF
+                  📄 <span className="hidden md:inline">Download</span> PDF
                 </button>
                 <button
                   onClick={() => setShowSprintModal(selectedSite)}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center gap-2"
+                  className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 flex items-center justify-center gap-2 text-sm md:text-base"
                 >
-                  🚀 Start Sprint
+                  🚀 <span className="hidden md:inline">Start</span> Sprint
                 </button>
               </div>
             </div>
 
             {/* Business Info + Map Row */}
-            <div className="grid grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6">
               {/* Business Details */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <h3 className="font-semibold text-gray-800 mb-4">📍 Business Information</h3>
@@ -2053,7 +2131,7 @@ export default function OnlinePresenceAuditTool() {
               </div>
 
               {/* Map */}
-              <div className="col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
                 {selectedSite.address ? (
                   <iframe
                     title="Business Location"
@@ -2260,10 +2338,10 @@ export default function OnlinePresenceAuditTool() {
 
         {/* Settings View */}
         {currentView === 'settings' && (
-          <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Settings</h2>
+          <div className="p-4 md:p-8">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Settings</h2>
             
-            <div className="grid gap-6 max-w-2xl">
+            <div className="grid gap-4 md:gap-6 max-w-2xl">
               {/* Branding Settings */}
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <h3 className="font-semibold text-gray-800 mb-4">🎨 Branding</h3>
