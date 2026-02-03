@@ -15,7 +15,7 @@ const DIRECTORY_CONFIG = {
     secondary: '#3b82f6',
     accent: '#10b981',
   },
-  logoUrl: '/images/OGlogo.jpeg',
+  logoUrl: '/Images/OGLogo.jpeg',
 };
 
 const getScoreColor = (score) => {
@@ -1154,39 +1154,12 @@ function generateReportHTML(site, audit, branding = {}) {
 }
 
 async function downloadPDF(site, audit, branding = {}) {
-  // Show loading
-  const loadingDiv = document.createElement('div');
-  loadingDiv.innerHTML = `
-    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;">
-      <div style="background:white;padding:24px 48px;border-radius:12px;text-align:center;">
-        <div style="font-size:32px;margin-bottom:12px;">📄</div>
-        <div style="font-weight:bold;color:#1f2937;">Generating PDF...</div>
-        <div style="color:#6b7280;font-size:14px;margin-top:4px;">This may take a few seconds</div>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(loadingDiv);
-  
   try {
-    // Load html2pdf library if not already loaded
-    if (!window.html2pdf) {
-      console.log('Loading PDF library...');
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-        script.onload = () => {
-          console.log('PDF library loaded');
-          resolve();
-        };
-        script.onerror = () => reject(new Error('Failed to load PDF library'));
-        document.head.appendChild(script);
-      });
-    }
-    
     // Check if we have audit data
     let fullAudit = audit;
     if (!audit) {
-      throw new Error('No audit data available');
+      alert('No audit data available. Please run an audit first.');
+      return;
     }
     
     // If audit is missing categories, try to load full audit from database
@@ -1199,9 +1172,6 @@ async function downloadPDF(site, audit, branding = {}) {
       }
     }
     
-    console.log('Generating report for:', site.domain);
-    console.log('Audit data:', fullAudit);
-    
     // Generate HTML with fallbacks for missing data
     const safeAudit = {
       totalScore: fullAudit.totalScore || 0,
@@ -1212,33 +1182,32 @@ async function downloadPDF(site, audit, branding = {}) {
     };
     
     const html = generateReportHTML(site, safeAudit, branding);
-    console.log('HTML generated, length:', html.length);
     
-    const container = document.createElement('div');
-    container.innerHTML = html;
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
-    container.style.width = '800px';
-    document.body.appendChild(container);
+    // Open in new window for printing/saving as PDF
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow popups to download the PDF report.');
+      return;
+    }
     
-    // Wait a tick for rendering
-    await new Promise(r => setTimeout(r, 500));
+    printWindow.document.write(html);
+    printWindow.document.close();
     
-    await window.html2pdf().set({
-      margin: 10,
-      filename: `ourgorithm-audit-${site.domain}-${new Date().toISOString().split('T')[0]}.pdf`,
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    }).from(container).save();
+    // Wait for content to load then trigger print
+    printWindow.onload = function() {
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
+    };
     
-    console.log('PDF saved successfully');
-    document.body.removeChild(container);
+    // Fallback if onload doesn't fire
+    setTimeout(() => {
+      printWindow.print();
+    }, 1000);
+    
   } catch (error) {
     console.error('PDF generation failed:', error);
-    alert('Failed to generate PDF: ' + error.message + '\n\nPlease try running a new audit first.');
-  } finally {
-    document.body.removeChild(loadingDiv);
+    alert('Failed to generate PDF: ' + error.message);
   }
 }
 
@@ -1573,16 +1542,8 @@ export default function OnlinePresenceAuditTool() {
       {/* Mobile Header */}
       <div className="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="bg-white rounded-lg p-1">
-            <img 
-              src="/images/OGlogo.jpeg" 
-              alt="Ourgorithm" 
-              className="h-8 w-auto" 
-              onError={(e) => { 
-                e.target.onerror = null; 
-                e.target.style.display = 'none';
-              }} 
-            />
+          <div className="bg-white rounded-lg px-2 py-1">
+            <span className="font-bold text-slate-800 text-lg">OG</span>
           </div>
           <span className="font-semibold">Ourgorithm</span>
         </div>
@@ -1625,18 +1586,9 @@ export default function OnlinePresenceAuditTool() {
       {/* Sidebar - Desktop Only */}
       <aside className="hidden md:flex w-64 bg-slate-900 text-white flex-col">
         <div className="p-6 border-b border-slate-700">
-          <div className="bg-white rounded-lg p-2 mb-3">
-            <img 
-              src="/images/OGlogo.jpeg" 
-              alt="Ourgorithm" 
-              className="h-14 w-auto" 
-              onError={(e) => { 
-                e.target.onerror = null; 
-                e.target.parentElement.innerHTML = '<div style="font-weight:bold;color:#1e293b;font-size:18px;padding:8px;">Ourgorithm</div>'; 
-              }} 
-            />
+          <div className="bg-white rounded-lg px-3 py-2 mb-3 inline-block">
+            <span className="font-bold text-slate-800 text-xl">Ourgorithm</span>
           </div>
-          <p className="text-white font-semibold text-lg">Ourgorithm</p>
           <p className="text-slate-400 text-sm">SEO Audit Tool</p>
         </div>
         
@@ -2140,7 +2092,7 @@ export default function OnlinePresenceAuditTool() {
                   onClick={() => downloadPDF(selectedSite, selectedSite.audit, branding)}
                   className="flex-1 md:flex-none px-3 md:px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 flex items-center justify-center gap-2 text-sm md:text-base"
                 >
-                  📄 <span className="hidden md:inline">Download</span> PDF
+                  📄 <span className="hidden md:inline">Print</span> Report
                 </button>
                 <button
                   onClick={() => setShowSprintModal(selectedSite)}
@@ -2657,3 +2609,4 @@ function SprintModal({ site, branding, onClose, onSubmit }) {
     </div>
   );
 }
+
