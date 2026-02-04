@@ -15,7 +15,7 @@ const DIRECTORY_CONFIG = {
     secondary: '#3b82f6',
     accent: '#10b981',
   },
-  logoUrl: '/Images/OGLogo.jpeg',
+  logoUrl: '/images/OGlogo.jpeg',
 };
 
 const getScoreColor = (score) => {
@@ -976,7 +976,7 @@ async function loadFullAuditFromDB(siteId) {
   }
 }
 
-async function saveSprintRequestToDB(siteId, email, phone, readinessTier, blockers) {
+async function saveSprintRequestToDB(siteId, email, phone, readinessTier, blockers, siteDomain) {
   try {
     const { data, error } = await supabase
       .from('sprint_requests')
@@ -992,6 +992,25 @@ async function saveSprintRequestToDB(siteId, email, phone, readinessTier, blocke
       .single();
     
     if (error) throw error;
+    
+    // Send email notification (opens user's email client)
+    const subject = encodeURIComponent(`New Sprint Request: ${siteDomain}`);
+    const body = encodeURIComponent(`
+New Sprint Request Received!
+
+Website: ${siteDomain}
+Client Email: ${email}
+Client Phone: ${phone}
+Readiness Tier: ${readinessTier}
+Blockers: ${blockers.join(', ') || 'None'}
+
+---
+Sent from Ourgorithm SEO Tool
+    `.trim());
+    
+    // Open email client with pre-filled info
+    window.open(`mailto:info@theservicejunkies.com?subject=${subject}&body=${body}`, '_blank');
+    
     return data;
   } catch (err) {
     console.error('Failed to save sprint request:', err);
@@ -1162,13 +1181,18 @@ async function downloadPDF(site, audit, branding = {}) {
       return;
     }
     
+    console.log('Starting PDF generation for:', site.domain);
+    console.log('Initial audit data:', JSON.stringify(audit, null, 2));
+    
     // If audit is missing categories, try to load full audit from database
     if (!audit.categories && site.id) {
-      console.log('Loading full audit from database...');
+      console.log('Loading full audit from database for site ID:', site.id);
       const dbAudit = await loadFullAuditFromDB(site.id);
       if (dbAudit) {
         fullAudit = dbAudit;
-        console.log('Full audit loaded from DB');
+        console.log('Full audit loaded from DB:', JSON.stringify(dbAudit, null, 2));
+      } else {
+        console.log('No audit found in database');
       }
     }
     
@@ -1181,33 +1205,48 @@ async function downloadPDF(site, audit, branding = {}) {
       auditDate: fullAudit.auditDate || new Date().toISOString(),
     };
     
-    const html = generateReportHTML(site, safeAudit, branding);
+    console.log('Safe audit data:', JSON.stringify(safeAudit, null, 2));
     
-    // Open in new window for printing/saving as PDF
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Please allow popups to download the PDF report.');
+    const html = generateReportHTML(site, safeAudit, branding);
+    console.log('Generated HTML length:', html.length);
+    
+    if (html.length < 500) {
+      console.error('HTML too short, something went wrong');
+      alert('Error generating report. Please try running a new audit.');
       return;
     }
     
-    printWindow.document.write(html);
-    printWindow.document.close();
+    // Method 1: Try opening in new window
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
     
-    // Wait for content to load then trigger print
-    printWindow.onload = function() {
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      
+      // Give it time to render
       setTimeout(() => {
+        printWindow.focus();
         printWindow.print();
-      }, 250);
-    };
-    
-    // Fallback if onload doesn't fire
-    setTimeout(() => {
-      printWindow.print();
-    }, 1000);
+      }, 500);
+    } else {
+      // Method 2: Fallback - download as HTML file
+      console.log('Popup blocked, using download fallback');
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ourgorithm-report-${site.domain}-${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('Report downloaded as HTML. Open it in your browser and use Print > Save as PDF.');
+    }
     
   } catch (error) {
     console.error('PDF generation failed:', error);
-    alert('Failed to generate PDF: ' + error.message);
+    alert('Failed to generate PDF: ' + error.message + '\n\nCheck the browser console for details.');
   }
 }
 
@@ -2450,7 +2489,7 @@ export default function OnlinePresenceAuditTool() {
           onSubmit={async (email, phone) => {
             const readiness = showSprintModal.audit?.directoryReadiness;
             const blockers = readiness?.requirements?.filter(r => !r.passed).map(r => r.label) || [];
-            await saveSprintRequestToDB(showSprintModal.id, email, phone, readiness?.tier, blockers);
+            await saveSprintRequestToDB(showSprintModal.id, email, phone, readiness?.tier, blockers, showSprintModal.domain);
             setShowSprintModal(null);
           }}
         />
@@ -2609,4 +2648,6 @@ function SprintModal({ site, branding, onClose, onSubmit }) {
     </div>
   );
 }
+  
+
 
